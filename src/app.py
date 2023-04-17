@@ -2,7 +2,7 @@
 This module takes care of starting the API Server, Loading the DB and Adding the endpoints
 """
 import os
-from flask import Flask, request, jsonify, url_for
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from datastructures import FamilyStructure
@@ -25,18 +25,57 @@ def handle_invalid_usage(error):
 def sitemap():
     return generate_sitemap(app)
 
+
 @app.route('/members', methods=['GET'])
 def handle_hello():
 
     # this is how you can use the Family datastructure by calling its methods
     members = jackson_family.get_all_members()
-    response_body = {
-        "hello": "world",
-        "family": members
-    }
-
+    response_body = members
 
     return jsonify(response_body), 200
+
+@app.route(('/member/<int:id>'), methods=['GET'])
+def get_single_id(id):
+
+    member = jackson_family.get_member(id)
+    response_body = member
+    return jsonify(response_body), 200
+
+@app.route('/member', methods=['POST'])
+def add_member():
+    #family = FamilyStructure(last_name="Jackson") ESTO ES UN ERROR, NO PODEMOS REINICIALIZAR LA FAMILIA EN CADA POST
+    data = request.json
+    new_member = {
+        "id": data["id"],
+        "first_name": data["first_name"],
+        "age": data["age"],
+        "lucky_numbers": data["lucky_numbers"]
+    }
+    jackson_family._members.append(new_member)
+
+
+    return jsonify(jackson_family._members)
+
+
+
+@app.route('/member/<int:id>', methods=['DELETE'])
+def delete_member(id):
+    # eliminar el miembro de la estructura de datos de la familia
+    result = jackson_family.delete_member(id)
+    
+    # si el miembro se eliminó correctamente, devolver una respuesta con código 200
+    if result:
+        response_body = {
+            "message": f"El miembro con ID {id} ha sido eliminado de la familia Jackson.",
+            "done" : True
+        }
+        return jsonify(response_body), 200
+    
+    # si el miembro no se encontró, devolver una respuesta con código 404
+    else:
+      return jsonify(f"No se encontró ningún miembro con ID {id}.", status_code=404)
+
 
 # this only runs if `$ python src/app.py` is executed
 if __name__ == '__main__':
